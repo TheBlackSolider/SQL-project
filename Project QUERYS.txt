@@ -1,0 +1,118 @@
+/*Query 1 - Query Used to show status of Customer depend on his/her pay_amount */
+SELECT 
+  X.first_name || ' ' || X.last_name AS full_name, 
+  SUM(p.amount) pay_amount, 
+  CASE WHEN SUM(p.amount) > 200 THEN 'VVIP' WHEN SUM(p.amount) < 200 
+  AND SUM(p.amount) >= 150 THEN 'VIP' WHEN SUM(p.amount) < 150 
+  AND SUM(p.amount) >= 100 THEN 'GOLD' ELSE 'STANDARD' END AS Customer_Level 
+FROM 
+  customer X 
+  INNER JOIN payment p ON X.customer_id = p.customer_id 
+GROUP BY 
+  1 
+ORDER BY 
+  2 DESC;
+
+
+
+/*Query 2 - Query Used to show table divide into five level of replacement_cost of film */
+SELECT 
+  title, 
+  name, 
+  replacement_cost, 
+  COUNT(*), 
+  NTILE(5) OVER (
+    PARTITION BY name 
+    ORDER BY 
+      replacement_cost
+  ) AS replacement_cost_Qauntile 
+FROM 
+  film_category F 
+  JOIN category C ON C.category_id = F.category_id 
+  JOIN film m ON m.film_id = F.film_id 
+WHERE 
+  (name LIKE 'Classics') 
+  OR (name LIKE 'Music') 
+  OR (name LIKE 'Comedy') 
+GROUP BY 
+  1, 
+  2, 
+  3 
+ORDER BY 
+  4;
+
+
+
+/*Query 3 - Query Used to show top 5 watched Family-Friendly movies based on rental amount */
+WITH moives AS (
+SELECT f.title movie, g.name Catgory_name, r.rental_id rental_id
+FROM film_category fg
+JOIN category g
+ON g.category_id = fg.category_id
+JOIN film f
+ON f.film_id = fg.film_id
+JOIN inventory i
+ON i.film_id = f.film_id
+JOIN rental r
+ON r.inventory_id = i.inventory_id
+WHERE g.name = 'Animation'  OR g.name = 'Children'
+OR g.name = 'Classics' OR g.name = 'Comedy' OR g.name = 'Family' OR g.name = 'Music' ),
+
+Catgories AS(
+SELECT DISTINCT(movie), Catgory_name, COUNT(rental_id) OVER(PARTITION BY movie) AS rental_count
+FROM moives
+ORDER BY Catgory_name ,1)
+
+
+SELECT movie,Catgory_name, MAX(rental_count)
+FROM Catgories
+GROUP BY 1,2
+ORDER BY 3 DESC
+LIMIT 5;
+
+
+
+/*Query 4 - Query Used show the TOP 10 Customer they have the most total amount send coupons Gift to them at their Emails */
+WITH T3 AS (
+  SELECT 
+    first_name, 
+    last_name, 
+    country, 
+    city, 
+    phone, 
+    email, 
+    SUM(amount) AS total_amount 
+  FROM 
+    country cou 
+    LEFT JOIN city ci ON ci.city_id = cou.country_id 
+    LEFT JOIN address ad ON ad.address_id = ci.city_id 
+    LEFT JOIN customer cu ON cu.customer_id = ad.address_id 
+    LEFT JOIN payment pa ON pa.customer_id = cu.customer_id 
+  GROUP BY 
+    1, 
+    2, 
+    3, 
+    4, 
+    5, 
+    6 
+  ORDER BY 
+    7
+) 
+SELECT 
+  DISTINCT first_name || ' ' || last_name as customer_name, 
+  email, 
+  SUM(total_amount) AS Total_amount 
+FROM 
+  T3 
+GROUP BY 
+  1, 
+  2 
+ORDER BY 
+  3 DESC 
+LIMIT 
+  10;
+
+
+
+
+
